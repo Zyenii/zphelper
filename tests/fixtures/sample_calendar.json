@@ -1,0 +1,40 @@
+{
+  "events": [
+    {
+      "id": "evt-1",
+      "title": "Daily Standup",
+      "start": "2026-01-15T09:00:00+00:00",
+      "end": "2026-01-15T10:00:00+00:00",
+      "location": "Zoom",
+      "is_all_day": false,
+      "timezone": "UTC"
+    },
+    {
+      "id": "evt-2",
+      "title": "Product Review",
+      "start": "2026-01-15T10:05:00+00:00",
+      "end": "2026-01-15T11:00:00+00:00",
+      "location": "Room A",
+      "is_all_day": false,
+      "timezone": "UTC"
+    },
+    {
+      "id": "evt-3",
+      "title": "Design Sync",
+      "start": "2026-01-15T10:50:00+00:00",
+      "end": "2026-01-15T11:30:00+00:00",
+      "location": "Room B",
+      "is_all_day": false,
+      "timezone": "UTC"
+    },
+    {
+      "id": "evt-4",
+      "title": "Deep Work Block",
+      "start": "2026-01-15T13:00:00+00:00",
+      "end": "2026-01-15T14:00:00+00:00",
+      "location": null,
+      "is_all_day": false,
+      "timezone": "UTC"
+    }
+  ]
+}
