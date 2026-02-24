@@ -1,0 +1,17 @@
+{
+  "summary": "Sunny and clear.",
+  "points": [
+    {
+      "time": "2026-01-15T08:00:00+00:00",
+      "rain_probability": 5,
+      "apparent_temperature": 20.0,
+      "wind_kph": 8.0
+    },
+    {
+      "time": "2026-01-15T09:00:00+00:00",
+      "rain_probability": 5,
+      "apparent_temperature": 21.0,
+      "wind_kph": 7.0
+    }
+  ]
+}

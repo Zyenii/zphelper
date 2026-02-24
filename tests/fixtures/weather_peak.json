@@ -1,0 +1,17 @@
+{
+  "summary": "Dry but windy rush-hour weather.",
+  "points": [
+    {
+      "time": "2026-01-15T08:00:00+00:00",
+      "rain_probability": 20,
+      "apparent_temperature": 14.0,
+      "wind_kph": 18.0
+    },
+    {
+      "time": "2026-01-15T09:00:00+00:00",
+      "rain_probability": 15,
+      "apparent_temperature": 15.0,
+      "wind_kph": 19.0
+    }
+  ]
+}

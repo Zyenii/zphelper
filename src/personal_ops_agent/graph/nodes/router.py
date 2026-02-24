@@ -1,21 +1,12 @@
 from personal_ops_agent.graph.state import AgentState
-
-SCHEDULE_KEYWORDS = {
-    "schedule",
-    "calendar",
-    "agenda",
-    "today",
-    "tomorrow",
-    "日程",
-    "安排",
-    "今天",
-    "明天",
-}
+from personal_ops_agent.router.router import dispatch_intent
 
 
 def router_node(state: AgentState) -> AgentState:
     message = state.get("user_message", "")
-    lowered = message.lower()
-    if any(keyword in lowered or keyword in message for keyword in SCHEDULE_KEYWORDS):
-        return {"intent": "schedule_summary"}
-    return {"intent": "unknown"}
+    decision = dispatch_intent(message)
+    return {
+        "intent": decision.intent,
+        "route_confidence": decision.confidence,
+        "route_reason": decision.reason,
+    }

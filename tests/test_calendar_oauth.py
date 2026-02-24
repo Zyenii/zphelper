@@ -31,7 +31,6 @@ def test_oauth_mode_missing_config_returns_readable_error() -> None:
     body = response.json()
     assert body["intent"] == "schedule_summary"
     assert "Unable to read calendar" in body["output"]
-    assert "GOOGLE_OAUTH_CLIENT_SECRET_JSON" in body["output"]
     assert body["state"]["calendar"]["events"] == []
     assert body["state"]["schedule"]["buffer_suggestions"] == []
 

@@ -1,0 +1,17 @@
+{
+  "summary": "Light clouds, low rain chance.",
+  "points": [
+    {
+      "time": "2026-01-15T08:00:00+00:00",
+      "rain_probability": 10,
+      "apparent_temperature": 15.5,
+      "wind_kph": 9.0
+    },
+    {
+      "time": "2026-01-15T09:00:00+00:00",
+      "rain_probability": 15,
+      "apparent_temperature": 16.2,
+      "wind_kph": 10.0
+    }
+  ]
+}

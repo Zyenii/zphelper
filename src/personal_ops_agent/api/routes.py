@@ -33,6 +33,10 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         state_snapshot["calendar"] = result["calendar"]
     if "schedule" in result:
         state_snapshot["schedule"] = result["schedule"]
+    if "weather" in result:
+        state_snapshot["weather"] = result["weather"]
+    if "commute" in result:
+        state_snapshot["commute"] = result["commute"]
 
     return ChatResponse(
         trace_id=trace_id,
