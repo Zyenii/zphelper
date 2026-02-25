@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from personal_ops_agent.graph.state import AgentState
+from personal_ops_agent.response.unknown_reply import generate_unknown_reply
 
 
 def _format_weather_output(state: AgentState) -> str | None:
@@ -44,6 +45,10 @@ def final_node(state: AgentState) -> AgentState:
     if weather_output:
         return {"output": weather_output}
 
+    checklist_summary = state.get("checklist", {}).get("summary")
+    if checklist_summary:
+        return {"output": checklist_summary}
+
     if state.get("output"):
         return {"output": state["output"]}
 
@@ -60,4 +65,8 @@ def final_node(state: AgentState) -> AgentState:
         return {"output": schedule_summary}
 
     user_message = state.get("user_message", "")
+    if state.get("intent") == "unknown":
+        llm_reply = generate_unknown_reply(user_message)
+        if llm_reply:
+            return {"output": llm_reply}
     return {"output": f"OK: {user_message}"}

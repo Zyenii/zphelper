@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from personal_ops_agent.core.settings import get_settings
+from personal_ops_agent.core.telemetry import record_llm_usage
 from personal_ops_agent.timewindow.types import TimeWindow
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,7 @@ def _call_openai_timewindow(message: str, model: str, api_key: str, now_local_is
             payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         raise RuntimeError(f"Time-window LLM network error: {exc}") from exc
+    record_llm_usage(model=model, usage=payload.get("usage"))
 
     output = payload.get("output", [])
     for item in output:

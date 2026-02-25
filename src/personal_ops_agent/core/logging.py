@@ -4,6 +4,7 @@ import contextvars
 import json
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 _TRACE_ID: contextvars.ContextVar[str] = contextvars.ContextVar("trace_id", default="-")
 
@@ -49,3 +50,8 @@ def configure_logging(level: str) -> None:
     root.handlers = [handler]
     root.setLevel(level)
     root._configured = True
+
+
+def log_event(logger: logging.Logger, event: str, **fields: Any) -> None:
+    pairs = " ".join(f"{key}={value}" for key, value in fields.items())
+    logger.info("event=%s %s", event, pairs)

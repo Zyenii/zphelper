@@ -1,0 +1,12 @@
+[
+  {"input": "提醒我明天交作业", "expected": {"title_contains": "交作业", "should_write": false}},
+  {"input": "add task: submit tax form tomorrow", "expected": {"title_contains": "submit tax form", "should_write": false}},
+  {"input": "请帮我创建待办：周五给导师发邮件", "expected": {"title_contains": "给导师发邮件", "should_write": false}},
+  {"input": "todo buy milk today", "expected": {"title_contains": "buy milk", "should_write": false}},
+  {"input": "提醒我 ASAP 发报销", "expected": {"title_contains": "发报销", "should_write": false}},
+  {"input": "add todo schedule dentist appointment", "expected": {"title_contains": "schedule dentist appointment", "should_write": false}},
+  {"input": "记得明天早上准备presentation", "expected": {"title_contains": "准备presentation", "should_write": false}},
+  {"input": "task: renew passport", "expected": {"title_contains": "renew passport", "should_write": false}},
+  {"input": "提醒我今天买机票", "expected": {"title_contains": "买机票", "should_write": false}},
+  {"input": "add task finish M4 report", "expected": {"title_contains": "finish M4 report", "should_write": false}}
+]

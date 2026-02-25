@@ -1,0 +1,12 @@
+[
+  {"message": "what's my schedule today?", "expected_intent": "schedule_summary", "required_paths": ["state.schedule.summary"]},
+  {"message": "我今天有什么安排", "expected_intent": "schedule_summary", "required_paths": ["state.schedule.summary"]},
+  {"message": "明天下午天气怎么样", "expected_intent": "weather_summary", "required_paths": ["state.weather.summary"]},
+  {"message": "what is weather this weekend", "expected_intent": "weather_summary", "required_paths": ["state.weather.summary"]},
+  {"message": "去纽约要多久", "expected_intent": "eta_query", "required_paths": ["state.commute.recommendation"]},
+  {"message": "我几点出发去下一个日程", "expected_intent": "commute_advice", "required_paths": ["state.commute.recommendation"]},
+  {"message": "提醒我明天交作业", "expected_intent": "todo_create", "required_paths": ["state.todo.draft"]},
+  {"message": "what should i bring for my next event", "expected_intent": "leaving_checklist", "required_paths": ["state.checklist.items"]},
+  {"message": "create event team sync 2026-03-01 10:00 2026-03-01 11:00 at Office", "expected_intent": "calendar_create", "required_paths": ["state.calendar_write.success"]},
+  {"message": "convert 180 minutes to hours", "expected_intent": "unknown", "required_paths": ["output"]}
+]

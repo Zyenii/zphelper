@@ -66,6 +66,38 @@ ETA_QUERY_KEYWORDS = {
     "要多久",
 }
 
+TODO_KEYWORDS = {
+    "todo",
+    "task",
+    "remind me",
+    "add task",
+    "add todo",
+    "待办",
+    "任务",
+    "提醒我",
+    "记得",
+}
+
+CHECKLIST_KEYWORDS = {
+    "what should i bring",
+    "leaving checklist",
+    "checklist",
+    "带什么",
+    "出门清单",
+    "下个日程总结",
+}
+
+CALENDAR_CREATE_KEYWORDS = {
+    "create event",
+    "add event",
+    "add to calendar",
+    "schedule a meeting",
+    "创建日程",
+    "添加日程",
+    "加到日历",
+    "安排会议",
+}
+
 
 @dataclass(frozen=True)
 class RouteDecision:
@@ -76,6 +108,12 @@ class RouteDecision:
 
 def rule_route(message: str) -> RouteDecision:
     lowered = message.lower()
+    if any(keyword in lowered or keyword in message for keyword in CALENDAR_CREATE_KEYWORDS):
+        return RouteDecision(intent=Intent.CALENDAR_CREATE.value, confidence=1.0, reason="rule_match_calendar_create")
+    if any(keyword in lowered or keyword in message for keyword in TODO_KEYWORDS):
+        return RouteDecision(intent=Intent.TODO_CREATE.value, confidence=1.0, reason="rule_match_todo")
+    if any(keyword in lowered or keyword in message for keyword in CHECKLIST_KEYWORDS):
+        return RouteDecision(intent=Intent.LEAVING_CHECKLIST.value, confidence=1.0, reason="rule_match_checklist")
     if any(keyword in lowered or keyword in message for keyword in ETA_QUERY_KEYWORDS) and (
         "to " in lowered or "去" in message or "到" in message
     ):

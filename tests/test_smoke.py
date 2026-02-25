@@ -22,4 +22,14 @@ def test_health_and_chat_smoke() -> None:
     assert "trace_id" in data
     assert data["intent"] == "unknown"
     assert data["output"] == "OK: hello"
-    assert data["state"] == {"intent": "unknown", "output": "OK: hello"}
+    assert data["state"]["intent"] == "unknown"
+    assert data["state"]["output"] == "OK: hello"
+    assert "eval" in data["state"]
+    assert "runtime" in data["state"]["eval"]
+
+
+def test_root_ui_page_smoke() -> None:
+    client = TestClient(app)
+    ui = client.get("/")
+    assert ui.status_code == 200
+    assert "Personal Ops Agent" in ui.text

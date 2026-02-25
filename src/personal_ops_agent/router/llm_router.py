@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from personal_ops_agent.core.settings import get_settings
+from personal_ops_agent.core.telemetry import record_llm_usage
 from personal_ops_agent.router.intent import INTENT_DESCRIPTIONS, Intent, all_intent_values
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ def _call_openai_classifier(message: str, model: str, api_key: str) -> str:
             payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         raise RuntimeError(f"LLM router network error: {exc}") from exc
+    record_llm_usage(model=model, usage=payload.get("usage"))
     return _extract_text_from_openai_response(payload)
 
 

@@ -20,8 +20,8 @@ def _reset_runtime() -> None:
 def test_oauth_mode_missing_config_returns_readable_error() -> None:
     os.environ["MOCK_CALENDAR"] = "0"
     os.environ["GOOGLE_CALENDAR_MODE"] = "oauth"
-    os.environ.pop("GOOGLE_OAUTH_CLIENT_SECRET_JSON", None)
-    os.environ.pop("GOOGLE_OAUTH_TOKEN_JSON", None)
+    os.environ["GOOGLE_OAUTH_CLIENT_SECRET_JSON"] = ""
+    os.environ["GOOGLE_OAUTH_TOKEN_JSON"] = ""
     _reset_runtime()
 
     client = TestClient(app)

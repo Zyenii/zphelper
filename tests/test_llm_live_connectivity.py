@@ -29,6 +29,15 @@ def test_live_llm_router_connectivity() -> None:
     if os.getenv("SHOW_LLM_TEST_OUTPUT") == "1":
         print("\n[LLM RAW]", raw)
         print("[LLM PARSED]", parsed)
-    assert parsed.intent in {"schedule_summary", "unknown", "commute_advice", "weather_summary", "eta_query"}
+    assert parsed.intent in {
+        "schedule_summary",
+        "unknown",
+        "commute_advice",
+        "weather_summary",
+        "eta_query",
+        "todo_create",
+        "leaving_checklist",
+        "calendar_create",
+    }
     assert 0.0 <= parsed.confidence <= 1.0
     assert isinstance(parsed.reason, str) and parsed.reason

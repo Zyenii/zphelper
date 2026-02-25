@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from personal_ops_agent.graph.state import AgentState
+from personal_ops_agent.todo.todoist_tool import TodoistError, list_todoist_tasks
 
 
 class BufferSuggestion(BaseModel):
@@ -41,6 +42,16 @@ def _build_summary(events: list[dict]) -> str:
         location = f" @ {event['location']}" if event.get("location") else ""
         lines.append(f"- {_event_time_text(event)} {event['title']}{location}")
     return "\n".join(lines)
+
+
+def _build_todo_lines(todos: list[dict]) -> list[str]:
+    if not todos:
+        return []
+    lines = [f"Todo reminders ({len(todos)}):"]
+    for todo in todos:
+        due_text = f" due {todo['due']}" if todo.get("due") else ""
+        lines.append(f"- P{todo.get('priority', 2)} {todo.get('title', '')}{due_text}")
+    return lines
 
 
 def _build_buffer_suggestions(events: list[dict]) -> list[dict]:
@@ -99,4 +110,18 @@ def schedule_summarize_node(state: AgentState) -> AgentState:
 
     summary = _build_summary(events)
     suggestions = _build_buffer_suggestions(events)
-    return {"schedule": {"summary": summary, "buffer_suggestions": suggestions}}
+    todos: list[dict] = []
+    todo_error: str | None = None
+    try:
+        todos = [item.model_dump() for item in list_todoist_tasks(trace_id=state.get("trace_id"), limit=5)]
+    except TodoistError as exc:
+        todo_error = str(exc)
+
+    todo_lines = _build_todo_lines(todos)
+    if todo_lines:
+        summary = f"{summary}\n\n" + "\n".join(todo_lines)
+
+    schedule_state: dict[str, object] = {"summary": summary, "buffer_suggestions": suggestions, "todos": todos}
+    if todo_error:
+        schedule_state["todo_error"] = todo_error
+    return {"schedule": schedule_state}

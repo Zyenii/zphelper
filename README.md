@@ -1,4 +1,4 @@
-# Personal Ops Agent (M1 + M2)
+# Personal Ops Agent (M1-M5)
 
 ## Requirements
 - Python 3.11+
@@ -90,6 +90,101 @@ RUN_LLM_LIVE_TEST=1 pytest -q tests/test_timewindow_llm_live.py
 ## Tests
 ```bash
 pytest -q
+```
+
+## M4 Todo Automation
+Intent keywords: `todo`, `add task`, `remind me`, `待办`, `提醒我`.
+
+Required env for real writes:
+```env
+TODOIST_API_TOKEN=your_todoist_token
+TODO_PARSER_MODEL=gpt-5-mini
+TODO_CONFIDENCE_THRESHOLD=0.7
+TODO_PARSE_RETRIES=2
+```
+
+Behavior:
+- Parse user text -> strict Todo schema validation.
+- Retry up to 2 times on schema/JSON failures.
+- Confidence gate: below threshold asks one clarification question and does not write.
+- On success, writes to Todoist REST API and returns created task metadata.
+
+Example:
+```bash
+curl -X POST "http://127.0.0.1:8000/chat" -H "Content-Type: application/json" -d "{\"message\":\"提醒我明天交作业\"}"
+```
+
+M4 10-case scaffold:
+```bash
+python tests/m4_todo_eval_runner.py
+```
+It prints pass/fail for:
+- schema validity
+- whether a write would occur given confidence threshold
+
+## M5 Leaving Checklist
+Intent keywords: `what should i bring`, `leaving checklist`, `带什么`, `出门清单`.
+
+Flow:
+- fetch next event (calendar)
+- fetch weather
+- fetch ETA/commute recommendation
+- deterministic checklist rules + optional LLM enrichment
+- strict schema validation with retry
+
+Output fields:
+- `checklist.summary`
+- `checklist.items`
+- `checklist.reasons`
+- `checklist.confidence`
+
+Two example outputs:
+1. Rainy scenario:
+```text
+Weekly sync at 2026-03-01T14:00:00+00:00 in Office. Suggested leave time: 2026-03-01T13:20:00+00:00.
+Items: [Umbrella, Phone, Wallet, Keys]
+```
+2. Cold + interview scenario:
+```text
+Interview loop at 2026-03-01T15:00:00+00:00 in HQ. Suggested leave time: 2026-03-01T14:10:00+00:00.
+Items: [Warm coat and gloves, ID / badge, Laptop and charger, Transit card / ride-share app ready]
+```
+
+M5 scenario tests:
+```bash
+pytest -q tests/test_checklist_m5.py
+```
+
+## Optional Postgres logging
+Set:
+```env
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+PROMPT_VERSION=v1
+```
+When configured, parser/checklist/todo-write logs are persisted with:
+- prompt_version
+- tokens
+- latency
+- tool success/failure
+- validation errors
+- confidence
+
+## M7 Observability + Regression
+Included in current codebase:
+- Unified structured log events (`event` + fields, always with `trace_id`)
+- Runtime telemetry in `/chat` response:
+  - `state.eval.runtime.llm_calls`
+  - `state.eval.runtime.input_tokens`
+  - `state.eval.runtime.output_tokens`
+  - `state.eval.runtime.total_tokens`
+  - `state.eval.runtime.estimated_cost_usd`
+  - `state.eval.runtime.retry_count`
+- Fixed 10-case regression fixture: `tests/fixtures/golden_m7_v1.json`
+- One-click regression runner: `scripts/run_regression.py`
+
+Run one command:
+```bash
+python scripts/run_regression.py
 ```
 
 ## Enable Google Calendar OAuth Mode
