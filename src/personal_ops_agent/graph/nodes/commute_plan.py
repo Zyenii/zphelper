@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from personal_ops_agent.commute.buffer import compute_buffer_minutes
 from personal_ops_agent.commute.context import resolve_trip_context
+from personal_ops_agent.commute.schemas import CommuteRecommendation
 from personal_ops_agent.connectors.eta import EtaConnectorError, get_eta
 from personal_ops_agent.core.settings import get_settings
 from personal_ops_agent.graph.state import AgentState
@@ -66,8 +67,16 @@ def commute_plan_node(state: AgentState) -> AgentState:
 
     if trip.needs_clarification:
         clarification = trip.clarification_question or "Where are you going?"
+        recommendation = CommuteRecommendation(
+            origin=trip.origin_text,
+            destination=trip.destination_text,
+            used_calendar_destination=False,
+            eta_source_used="clarification",
+            needs_clarification=True,
+            clarification_question=clarification,
+        ).model_dump(exclude_none=True)
         return {
-            "commute": {"recommendation": {"needs_clarification": True, "clarification_question": clarification}},
+            "commute": {"recommendation": recommendation},
             "output": clarification,
         }
 
@@ -80,16 +89,15 @@ def commute_plan_node(state: AgentState) -> AgentState:
     except EtaConnectorError as exc:
         logger.error("commute_eta.failed error=%s", exc)
         error_text = f"ETA service unavailable: {exc}"
+        recommendation = CommuteRecommendation(
+            origin=trip.origin_text,
+            destination=trip.destination_text,
+            used_calendar_destination=trip.used_calendar_destination,
+            eta_source_used="error",
+            error=error_text,
+        ).model_dump(exclude_none=True)
         return {
-            "commute": {
-                "recommendation": {
-                    "origin": trip.origin_text,
-                    "destination": trip.destination_text,
-                    "used_calendar_destination": trip.used_calendar_destination,
-                    "eta_source_used": "error",
-                    "error": error_text,
-                }
-            },
+            "commute": {"recommendation": recommendation},
             "output": f"暂时无法获取实时通勤时间。{error_text}",
         }
     logger.info(
@@ -108,7 +116,7 @@ def commute_plan_node(state: AgentState) -> AgentState:
         f"+天气{breakdown['add_weather']}+高峰{breakdown['add_peak']}）。"
     )
 
-    recommendation: dict[str, object] = {
+    recommendation_payload: dict[str, object] = {
         "origin": trip.origin_text,
         "destination": trip.destination_text,
         "used_calendar_destination": trip.used_calendar_destination,
@@ -134,15 +142,16 @@ def commute_plan_node(state: AgentState) -> AgentState:
             f"从{trip.origin_text}开车到{trip.destination_text}，当前预计约 {eta_minutes} 分钟{delay_text}。"
             f"数据来源：{eta_state.get('source', 'error')}。"
         )
+        recommendation = CommuteRecommendation.model_validate(recommendation_payload).model_dump(exclude_none=True)
         return {"commute": {"recommendation": recommendation}, "output": output}
 
     latest_leave = trip.event_start_time - timedelta(minutes=eta_minutes + buffer_minutes)
     comfortable_leave = latest_leave - timedelta(minutes=5)
-    recommendation["event_start_time"] = trip.event_start_time.isoformat()
-    recommendation["event_title"] = trip.event_title
-    recommendation["latest_leave_time"] = latest_leave.isoformat()
-    recommendation["comfortable_leave_time"] = comfortable_leave.isoformat()
-    recommendation["leave_time"] = latest_leave.isoformat()
+    recommendation_payload["event_start_time"] = trip.event_start_time.isoformat()
+    recommendation_payload["event_title"] = trip.event_title
+    recommendation_payload["latest_leave_time"] = latest_leave.isoformat()
+    recommendation_payload["comfortable_leave_time"] = comfortable_leave.isoformat()
+    recommendation_payload["leave_time"] = latest_leave.isoformat()
 
     output = (
         f"你下一个日程{('“' + trip.event_title + '”') if trip.event_title else ''}在"
@@ -154,4 +163,5 @@ def commute_plan_node(state: AgentState) -> AgentState:
         f"更稳妥可在 { _local_time_text(comfortable_leave, settings.DEFAULT_TIMEZONE)} 出门。"
         f"ETA来源：{eta_state.get('source', 'error')}。"
     )
+    recommendation = CommuteRecommendation.model_validate(recommendation_payload).model_dump(exclude_none=True)
     return {"commute": {"recommendation": recommendation}, "output": output}

@@ -12,12 +12,14 @@ class Settings(BaseSettings):
 
     APP_ENV: Literal["development", "test", "staging", "production"]
     LOG_LEVEL: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+    PREFER_DOTENV_IN_DEV: bool = True
     OPENAI_API_KEY: str | None = None
     OPENAI_INPUT_COST_PER_1K_USD: float = 0.0
     OPENAI_OUTPUT_COST_PER_1K_USD: float = 0.0
     LLM_ROUTER: bool = False
     LLM_ROUTER_MODEL: str = "gpt-4.1-mini"
     LLM_ROUTER_THRESHOLD: float = 0.7
+    LLM_ROUTER_RETRIES: int = 1
     UNKNOWN_LLM_REPLY: bool = False
     UNKNOWN_LLM_MODEL: str = "gpt-5-mini"
     LLM_TIMEWINDOW: bool = False

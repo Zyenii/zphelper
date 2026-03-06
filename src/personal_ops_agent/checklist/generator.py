@@ -95,9 +95,11 @@ def _call_openai(prompt: str, model: str, api_key: str) -> tuple[str, int | None
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         method="POST",
     )
+    started_at = time.perf_counter()
     with urlopen(req, timeout=15) as response:  # noqa: S310
         payload = json.loads(response.read().decode("utf-8"))
-    record_llm_usage(model=model, usage=payload.get("usage"))
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    record_llm_usage(model=model, usage=payload.get("usage"), latency_ms=latency_ms)
     usage = payload.get("usage", {})
     tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
     output = payload.get("output", [])

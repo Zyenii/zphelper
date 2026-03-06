@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -60,11 +61,13 @@ def generate_unknown_reply(user_message: str) -> str | None:
         method="POST",
     )
     try:
+        started_at = time.perf_counter()
         with urlopen(req, timeout=12) as response:  # noqa: S310
             payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         logger.warning("unknown_reply.failed error=%s", exc)
         return None
-    record_llm_usage(model=settings.UNKNOWN_LLM_MODEL, usage=payload.get("usage"))
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    record_llm_usage(model=settings.UNKNOWN_LLM_MODEL, usage=payload.get("usage"), latency_ms=latency_ms)
     text = _extract_text(payload)
     return text or None

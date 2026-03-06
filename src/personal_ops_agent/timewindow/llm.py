@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 from urllib.error import URLError
@@ -73,11 +74,13 @@ def _call_openai_timewindow(message: str, model: str, api_key: str, now_local_is
         method="POST",
     )
     try:
+        started_at = time.perf_counter()
         with urlopen(req, timeout=12) as response:  # noqa: S310
             payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         raise RuntimeError(f"Time-window LLM network error: {exc}") from exc
-    record_llm_usage(model=model, usage=payload.get("usage"))
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    record_llm_usage(model=model, usage=payload.get("usage"), latency_ms=latency_ms)
 
     output = payload.get("output", [])
     for item in output:

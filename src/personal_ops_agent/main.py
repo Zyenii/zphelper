@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from personal_ops_agent.api.routes import router
 from personal_ops_agent.core.logging import configure_logging, log_event, reset_trace_id, set_trace_id
 from personal_ops_agent.core.settings import get_settings
-from personal_ops_agent.core.telemetry import reset_runtime_stats, restore_runtime_stats
+from personal_ops_agent.core.telemetry import record_request_latency, reset_runtime_stats, restore_runtime_stats
 
 settings = get_settings()
 configure_logging(settings.LOG_LEVEL)
@@ -36,12 +37,15 @@ async def tracing_middleware(request: Request, call_next):
     token = set_trace_id(trace_id)
     stats_token = reset_runtime_stats()
     request.state.trace_id = trace_id
+    request_started_at = time.perf_counter()
 
     log_event(logger, "request.start", method=request.method, path=request.url.path)
     try:
         response = await call_next(request)
         log_event(logger, "request.end", method=request.method, path=request.url.path)
     finally:
+        elapsed_ms = int((time.perf_counter() - request_started_at) * 1000)
+        record_request_latency(elapsed_ms)
         restore_runtime_stats(stats_token)
         reset_trace_id(token)
 

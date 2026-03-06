@@ -18,6 +18,9 @@ class RuntimeStats:
     total_tokens: int = 0
     estimated_cost_usd: float = 0.0
     retry_count: int = 0
+    llm_latency_ms: int = 0
+    request_latency_ms: int = 0
+    llm_error_count: int = 0
 
 
 _RUNTIME_STATS: contextvars.ContextVar[RuntimeStats] = contextvars.ContextVar("runtime_stats", default=RuntimeStats())
@@ -40,7 +43,7 @@ def _extract_usage_counts(usage: dict[str, Any] | None) -> tuple[int, int, int]:
     return input_tokens, output_tokens, total_tokens
 
 
-def record_llm_usage(*, model: str, usage: dict[str, Any] | None) -> None:
+def record_llm_usage(*, model: str, usage: dict[str, Any] | None, latency_ms: int | None = None) -> None:
     stats = _RUNTIME_STATS.get()
     input_tokens, output_tokens, total_tokens = _extract_usage_counts(usage)
     settings = get_settings()
@@ -51,13 +54,16 @@ def record_llm_usage(*, model: str, usage: dict[str, Any] | None) -> None:
     stats.output_tokens += output_tokens
     stats.total_tokens += total_tokens
     stats.estimated_cost_usd += input_cost + output_cost
+    if isinstance(latency_ms, int) and latency_ms >= 0:
+        stats.llm_latency_ms += latency_ms
     logger.info(
-        "telemetry.llm_usage model=%s input_tokens=%s output_tokens=%s total_tokens=%s estimated_cost_usd=%.6f",
+        "telemetry.llm_usage model=%s input_tokens=%s output_tokens=%s total_tokens=%s estimated_cost_usd=%.6f latency_ms=%s",
         model,
         input_tokens,
         output_tokens,
         total_tokens,
         input_cost + output_cost,
+        latency_ms,
     )
 
 
@@ -65,6 +71,17 @@ def record_retry(component: str, reason: str) -> None:
     stats = _RUNTIME_STATS.get()
     stats.retry_count += 1
     logger.info("telemetry.retry component=%s reason=%s count=%s", component, reason, stats.retry_count)
+
+
+def record_request_latency(latency_ms: int) -> None:
+    stats = _RUNTIME_STATS.get()
+    stats.request_latency_ms = max(0, int(latency_ms))
+
+
+def record_llm_error(reason: str) -> None:
+    stats = _RUNTIME_STATS.get()
+    stats.llm_error_count += 1
+    logger.warning("telemetry.llm_error reason=%s count=%s", reason, stats.llm_error_count)
 
 
 def get_runtime_stats() -> dict[str, Any]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -88,11 +89,13 @@ def _call_openai_calendar_time(message: str, now_local: datetime, timezone_name:
         method="POST",
     )
     try:
+        started_at = time.perf_counter()
         with urlopen(req, timeout=12) as response:  # noqa: S310
             payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         raise RuntimeError(f"Calendar time parse network error: {exc}") from exc
-    record_llm_usage(model=settings.LLM_CALENDAR_CREATE_MODEL, usage=payload.get("usage"))
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    record_llm_usage(model=settings.LLM_CALENDAR_CREATE_MODEL, usage=payload.get("usage"), latency_ms=latency_ms)
     return _extract_text_from_openai_response(payload)
 
 

@@ -18,16 +18,21 @@ def test_runtime_stats_present_in_chat_response() -> None:
     assert resp.status_code == 200
     payload = resp.json()
     runtime = payload["state"]["eval"]["runtime"]
-    assert set(runtime.keys()) == {
+    required = {
         "llm_calls",
         "input_tokens",
         "output_tokens",
         "total_tokens",
         "estimated_cost_usd",
         "retry_count",
+        "llm_latency_ms",
+        "request_latency_ms",
+        "llm_error_count",
     }
+    assert required.issubset(set(runtime.keys()))
     assert isinstance(runtime["llm_calls"], int)
     assert isinstance(runtime["retry_count"], int)
+    assert isinstance(runtime["request_latency_ms"], int)
 
 
 def test_m7_golden_fixture_has_ten_cases() -> None:

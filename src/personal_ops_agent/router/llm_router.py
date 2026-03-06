@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import URLError
@@ -10,7 +11,7 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from personal_ops_agent.core.settings import get_settings
-from personal_ops_agent.core.telemetry import record_llm_usage
+from personal_ops_agent.core.telemetry import record_llm_error, record_llm_usage, record_retry
 from personal_ops_agent.router.intent import INTENT_DESCRIPTIONS, Intent, all_intent_values
 
 logger = logging.getLogger(__name__)
@@ -98,11 +99,13 @@ def _call_openai_classifier(message: str, model: str, api_key: str) -> str:
         method="POST",
     )
     try:
+        started_at = time.perf_counter()
         with urlopen(req, timeout=12) as response:  # noqa: S310
             payload = json.loads(response.read().decode("utf-8"))
     except URLError as exc:
         raise RuntimeError(f"LLM router network error: {exc}") from exc
-    record_llm_usage(model=model, usage=payload.get("usage"))
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    record_llm_usage(model=model, usage=payload.get("usage"), latency_ms=latency_ms)
     return _extract_text_from_openai_response(payload)
 
 
@@ -122,11 +125,20 @@ def llm_route(message: str) -> LLMRouteResult:
     settings = get_settings()
     if not settings.OPENAI_API_KEY:
         return LLMRouteResult(intent=Intent.UNKNOWN.value, confidence=0.0, reason="missing_api_key")
-    try:
-        raw = _call_openai_classifier(message, settings.LLM_ROUTER_MODEL, settings.OPENAI_API_KEY)
-        result = parse_llm_router_output(raw)
-    except (RuntimeError, ValidationError, ValueError, json.JSONDecodeError) as exc:
-        logger.warning("llm_router.failed error=%s", exc)
+    attempts = max(1, min(3, 1 + int(settings.LLM_ROUTER_RETRIES)))
+    for attempt in range(1, attempts + 1):
+        try:
+            raw = _call_openai_classifier(message, settings.LLM_ROUTER_MODEL, settings.OPENAI_API_KEY)
+            result = parse_llm_router_output(raw)
+            break
+        except (RuntimeError, ValidationError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning("llm_router.failed attempt=%s error=%s", attempt, exc)
+            record_retry("llm_router", str(exc))
+            if attempt == attempts:
+                record_llm_error("router_failed_after_retries")
+                return LLMRouteResult(intent=Intent.UNKNOWN.value, confidence=0.0, reason="llm_error")
+    else:
+        record_llm_error("router_failed_no_attempt")
         return LLMRouteResult(intent=Intent.UNKNOWN.value, confidence=0.0, reason="llm_error")
 
     if result.confidence < settings.LLM_ROUTER_THRESHOLD:

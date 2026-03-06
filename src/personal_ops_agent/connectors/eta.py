@@ -83,6 +83,20 @@ def _normalize_place_text(value: str) -> str:
     return normalized
 
 
+def _candidate_addresses(value: str) -> list[str]:
+    normalized = _normalize_place_text(value)
+    candidates: list[str] = [normalized]
+    lowered = normalized.lower()
+    if "airport" in lowered and "usa" not in lowered:
+        candidates.append(f"{normalized}, USA")
+    if "new york" in lowered and "ny" not in lowered:
+        candidates.append("New York, NY, USA")
+    if "philadelphia" in lowered and "pa" not in lowered:
+        candidates.append("Philadelphia, PA, USA")
+    # preserve order while removing duplicates
+    return list(dict.fromkeys(candidates))
+
+
 def _load_mock_eta() -> dict[str, Any]:
     settings = get_settings()
     fixture_path = Path(settings.ETA_FIXTURE_PATH)
@@ -116,8 +130,8 @@ def _read_google_eta(origin_text: str, destination_text: str, depart_time: datet
     if not api_key:
         raise EtaConnectorError("GOOGLE_ROUTES_API_KEY/ROUTES_API is required for google ETA mode.")
 
-    origin_text = _normalize_place_text(origin_text)
-    destination_text = _normalize_place_text(destination_text)
+    origin_candidates = _candidate_addresses(origin_text)
+    destination_candidates = _candidate_addresses(destination_text)
     language_code = "zh-CN" if (_looks_like_cjk(origin_text) or _looks_like_cjk(destination_text)) else "en-US"
 
     now_utc = datetime.now(timezone.utc).replace(microsecond=0)
@@ -126,43 +140,56 @@ def _read_google_eta(origin_text: str, destination_text: str, depart_time: datet
     if safe_departure <= min_departure_utc:
         safe_departure = min_departure_utc
 
-    body = {
-        "origin": {"address": origin_text},
-        "destination": {"address": destination_text},
-        "travelMode": "DRIVE",
-        "routingPreference": "TRAFFIC_AWARE",
-        "computeAlternativeRoutes": False,
-        "departureTime": safe_departure.isoformat().replace("+00:00", "Z"),
-        "languageCode": language_code,
-        "units": "METRIC",
-    }
-    request = Request(
-        "https://routes.googleapis.com/directions/v2:computeRoutes",
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": api_key,
-            "X-Goog-FieldMask": "routes.duration,routes.staticDuration,routes.distanceMeters",
-        },
-        method="POST",
-    )
-    try:
-        with urlopen(request, timeout=12) as response:  # noqa: S310
-            payload = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        detail = ""
-        try:
-            detail = exc.read().decode("utf-8", errors="replace").strip()
-        except Exception:  # noqa: BLE001
-            detail = ""
-        raise EtaConnectorError(f"Google ETA HTTP {exc.code}: {detail or exc.reason}") from exc
-    except URLError as exc:
-        raise EtaConnectorError(f"Google ETA request failed: {exc}") from exc
+    last_no_route_error: str | None = None
+    first: dict[str, Any] | None = None
+    for origin_candidate in origin_candidates:
+        for destination_candidate in destination_candidates:
+            body = {
+                "origin": {"address": origin_candidate},
+                "destination": {"address": destination_candidate},
+                "travelMode": "DRIVE",
+                "routingPreference": "TRAFFIC_AWARE",
+                "computeAlternativeRoutes": False,
+                "departureTime": safe_departure.isoformat().replace("+00:00", "Z"),
+                "languageCode": language_code,
+                "units": "METRIC",
+                "regionCode": "US",
+            }
+            request = Request(
+                "https://routes.googleapis.com/directions/v2:computeRoutes",
+                data=json.dumps(body).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Goog-Api-Key": api_key,
+                    "X-Goog-FieldMask": "routes.duration,routes.staticDuration,routes.distanceMeters",
+                },
+                method="POST",
+            )
+            try:
+                with urlopen(request, timeout=12) as response:  # noqa: S310
+                    payload = json.loads(response.read().decode("utf-8"))
+            except HTTPError as exc:
+                detail = ""
+                try:
+                    detail = exc.read().decode("utf-8", errors="replace").strip()
+                except Exception:  # noqa: BLE001
+                    detail = ""
+                raise EtaConnectorError(f"Google ETA HTTP {exc.code}: {detail or exc.reason}") from exc
+            except URLError as exc:
+                raise EtaConnectorError(f"Google ETA request failed: {exc}") from exc
 
-    routes = payload.get("routes", [])
-    if not routes:
-        raise EtaConnectorError("Google ETA response has no routes.")
-    first = routes[0]
+            routes = payload.get("routes", [])
+            if routes:
+                first = routes[0]
+                break
+            last_no_route_error = (
+                f"Google ETA response has no routes for origin='{origin_candidate}' destination='{destination_candidate}'."
+            )
+        if first:
+            break
+    if not first:
+        raise EtaConnectorError(last_no_route_error or "Google ETA response has no routes.")
+
     eta_minutes = _parse_duration_to_minutes(first.get("duration"))
     if eta_minutes is None:
         raise EtaConnectorError("Google ETA response missing duration.")

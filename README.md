@@ -179,6 +179,9 @@ Included in current codebase:
   - `state.eval.runtime.total_tokens`
   - `state.eval.runtime.estimated_cost_usd`
   - `state.eval.runtime.retry_count`
+  - `state.eval.runtime.llm_latency_ms`
+  - `state.eval.runtime.request_latency_ms`
+  - `state.eval.runtime.llm_error_count`
 - Fixed 10-case regression fixture: `tests/fixtures/golden_m7_v1.json`
 - One-click regression runner: `scripts/run_regression.py`
 

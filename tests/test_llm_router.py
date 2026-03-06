@@ -52,3 +52,25 @@ def test_llm_route_invalid_schema_returns_unknown(monkeypatch) -> None:
     result = llm_route("message")
     assert result.intent == Intent.UNKNOWN.value
     assert result.reason == "llm_error"
+
+
+def test_llm_route_retries_then_succeeds(monkeypatch) -> None:
+    os.environ["APP_ENV"] = "test"
+    os.environ["LOG_LEVEL"] = "INFO"
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    os.environ["LLM_ROUTER"] = "1"
+    os.environ["LLM_ROUTER_RETRIES"] = "1"
+    _reset_settings()
+
+    calls = {"n": 0}
+
+    def _fake_call(_message: str, _model: str, _key: str) -> str:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("temporary network")
+        return '{"intent":"schedule_summary","confidence":0.91,"reason":"retry_ok"}'
+
+    monkeypatch.setattr("personal_ops_agent.router.llm_router._call_openai_classifier", _fake_call)
+    result = llm_route("what's my schedule")
+    assert calls["n"] == 2
+    assert result.intent == Intent.SCHEDULE_SUMMARY.value
