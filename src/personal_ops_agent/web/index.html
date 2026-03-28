@@ -103,6 +103,25 @@
         color: var(--muted);
         font-size: 13px;
       }
+      .utility {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .link-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 9px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+      }
       .badge {
         display: inline-block;
         margin-left: 8px;
@@ -129,6 +148,9 @@
         </form>
       </section>
       <div class="hint">This UI sends POST requests to <code>/chat</code>.</div>
+      <div class="utility">
+        <a class="link-pill" href="/showcase">Open Project Showcase</a>
+      </div>
       <pre id="raw" class="raw">{ "status": "idle" }</pre>
     </main>
 

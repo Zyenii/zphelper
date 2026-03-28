@@ -31,6 +31,11 @@ def web_ui() -> FileResponse:
     return FileResponse(_STATIC_DIR / "index.html")
 
 
+@app.get("/showcase")
+def showcase_page() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "showcase.html")
+
+
 @app.middleware("http")
 async def tracing_middleware(request: Request, call_next):
     trace_id = request.headers.get("x-trace-id") or str(uuid4())
