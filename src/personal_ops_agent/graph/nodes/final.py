@@ -52,6 +52,10 @@ def final_node(state: AgentState) -> AgentState:
     if state.get("output"):
         return {"output": state["output"]}
 
+    todo_summary = state.get("todo", {}).get("summary")
+    if todo_summary:
+        return {"output": todo_summary}
+
     commute_recommendation = state.get("commute", {}).get("recommendation")
     if commute_recommendation:
         leave_time = commute_recommendation.get("leave_time", "")

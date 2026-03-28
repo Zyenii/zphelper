@@ -29,6 +29,7 @@ def _deterministic_items(
     event: dict[str, Any] | None,
     weather_state: dict[str, Any],
     commute_state: dict[str, Any],
+    memory_state: dict[str, Any],
 ) -> tuple[list[str], list[str]]:
     items: list[str] = []
     reasons: list[str] = []
@@ -37,11 +38,15 @@ def _deterministic_items(
     temp_min = min((float(point.get("apparent_temperature", 99.0)) for point in points), default=99.0)
     transport_mode = str(commute_state.get("recommendation", {}).get("transport_mode", ""))
     title = str((event or {}).get("title", "")).lower()
+    preferences = memory_state.get("preferences", {}) if isinstance(memory_state, dict) else {}
+    behavioral_notes = memory_state.get("behavioral_notes", {}) if isinstance(memory_state, dict) else {}
+    rain_threshold = float(preferences.get("rain_alert_threshold", 0.5) or 0.5)
+    cold_threshold = float(preferences.get("cold_alert_celsius", 3.0) or 3.0)
 
-    if rain_max >= 50:
+    if (rain_max / 100.0) >= rain_threshold:
         items.append("Umbrella")
         reasons.append(f"Rain probability reaches {rain_max}% in your travel window.")
-    if temp_min <= 3:
+    if temp_min <= cold_threshold:
         items.append("Warm coat and gloves")
         reasons.append(f"Feels-like temperature drops to {temp_min:.1f}C.")
     if transport_mode in {"transit", "taxi"}:
@@ -52,6 +57,22 @@ def _deterministic_items(
         reasons.append("High-stakes event typically requires identity check.")
         items.append("Laptop and charger")
         reasons.append("Event type suggests materials may be needed.")
+
+    if "meeting" in title or "开会" in str((event or {}).get("title", "")):
+        for item in behavioral_notes.get("meeting_prep", [])[:3]:
+            if item not in items:
+                items.append(item)
+                reasons.append("Added from your saved meeting preparation preferences.")
+    if "interview" in title:
+        for item in behavioral_notes.get("interview_prep", [])[:3]:
+            if item not in items:
+                items.append(item)
+                reasons.append("Added from your saved interview preparation preferences.")
+    if "presentation" in title:
+        for item in behavioral_notes.get("presentation_prep", [])[:3]:
+            if item not in items:
+                items.append(item)
+                reasons.append("Added from your saved presentation preparation preferences.")
 
     if not items:
         items = ["Phone", "Wallet", "Keys"]
@@ -121,11 +142,17 @@ def generate_checklist(
     calendar_state: dict[str, Any],
     weather_state: dict[str, Any],
     commute_state: dict[str, Any],
+    memory_state: dict[str, Any],
 ) -> LeavingChecklist:
     settings = get_settings()
     start = time.perf_counter()
     event = _next_event(calendar_state)
-    items, reasons = _deterministic_items(event=event, weather_state=weather_state, commute_state=commute_state)
+    items, reasons = _deterministic_items(
+        event=event,
+        weather_state=weather_state,
+        commute_state=commute_state,
+        memory_state=memory_state,
+    )
     base = LeavingChecklist(summary=_build_summary(event, commute_state), items=items, reasons=reasons, confidence=0.75)
     base.validate_alignment()
 
@@ -136,6 +163,7 @@ def generate_checklist(
         "event": event or {},
         "weather": weather_state,
         "commute": commute_state,
+        "memory": memory_state,
     }
     error_text: str | None = None
     tokens: int | None = None

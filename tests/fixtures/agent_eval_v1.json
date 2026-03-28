@@ -1,0 +1,82 @@
+[
+  {
+    "id": "schedule_today",
+    "message": "what's my schedule today?",
+    "expected_intent": "schedule_summary",
+    "expected_tools": ["schedule_read", "schedule_summarize"],
+    "required_paths": ["state.schedule.summary", "state.calendar.events"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "weather_today",
+    "message": "今天天气怎么样",
+    "expected_intent": "weather_summary",
+    "expected_tools": ["weather_read", "weather_summarize"],
+    "required_paths": ["state.weather.summary", "state.weather.points"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "eta_now",
+    "message": "我现在去纽约要多久",
+    "expected_intent": "eta_query",
+    "expected_tools": ["commute_plan"],
+    "required_paths": ["state.commute.recommendation.eta_minutes", "state.commute.recommendation.transport_mode"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "commute_next_event",
+    "message": "我几点出发去下一个日程？",
+    "expected_intent": "commute_advice",
+    "expected_tools": ["schedule_read", "weather_read", "commute_plan"],
+    "required_paths": ["state.commute.recommendation.leave_time", "state.weather.summary"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "todo_create",
+    "message": "提醒我明天交作业",
+    "expected_intent": "todo_create",
+    "expected_tools": ["schedule_read", "todo_parse", "todo_write"],
+    "required_paths": ["state.todo.draft", "state.todo.write"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "todo_list",
+    "message": "我有哪些todo",
+    "expected_intent": "todo_list",
+    "expected_tools": ["todo_read"],
+    "required_paths": ["state.todo.tasks"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "checklist",
+    "message": "我下个日程要带什么",
+    "expected_intent": "leaving_checklist",
+    "expected_tools": ["schedule_read", "weather_read", "commute_plan", "checklist_generate"],
+    "required_paths": ["state.checklist.summary", "state.checklist.items", "state.checklist.reasons"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "calendar_create",
+    "message": "明天晚上8点安排一个开会",
+    "expected_intent": "calendar_create",
+    "expected_tools": ["calendar_create"],
+    "required_paths": ["state.calendar_write"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "schedule_chinese",
+    "message": "我今天有什么安排",
+    "expected_intent": "schedule_summary",
+    "expected_tools": ["schedule_read", "schedule_summarize"],
+    "required_paths": ["state.schedule.summary"],
+    "checks_output_matches_state": true
+  },
+  {
+    "id": "weather_weekend",
+    "message": "这周末天气怎么样",
+    "expected_intent": "weather_summary",
+    "expected_tools": ["weather_read", "weather_summarize"],
+    "required_paths": ["state.weather.summary", "state.weather.window_start"],
+    "checks_output_matches_state": true
+  }
+]

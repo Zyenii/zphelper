@@ -20,11 +20,18 @@ class Settings(BaseSettings):
     LLM_ROUTER_MODEL: str = "gpt-4.1-mini"
     LLM_ROUTER_THRESHOLD: float = 0.7
     LLM_ROUTER_RETRIES: int = 1
+    LLM_PLANNER: bool = False
+    LLM_PLANNER_MODEL: str = "gpt-5-mini"
+    LLM_PLANNER_THRESHOLD: float = 0.75
+    LLM_PLANNER_MAX_ACTIONS: int = 4
     UNKNOWN_LLM_REPLY: bool = False
     UNKNOWN_LLM_MODEL: str = "gpt-5-mini"
     LLM_TIMEWINDOW: bool = False
     LLM_TIMEWINDOW_MODEL: str = "gpt-5-mini"
     LLM_TIMEWINDOW_THRESHOLD: float = 0.75
+    LLM_LOCATION_EXTRACTOR: bool = False
+    LLM_LOCATION_EXTRACTOR_MODEL: str = "gpt-5-mini"
+    LLM_LOCATION_EXTRACTOR_THRESHOLD: float = 0.75
     LLM_CALENDAR_CREATE_TIME: bool = False
     LLM_CALENDAR_CREATE_MODEL: str = "gpt-5-mini"
     LLM_CALENDAR_CREATE_THRESHOLD: float = 0.75
@@ -38,6 +45,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str | None = None
     TODOIST_API_TOKEN: str | None = None
     DEFAULT_TIMEZONE: str = "America/New_York"
+    MEMORY_ENABLED: bool = True
+    MEMORY_STORE_PATH: str = "data/user_memory.json"
     TIMEWINDOW_NOW_ISO: str | None = None
     MOCK_CALENDAR: bool = False
     GOOGLE_CALENDAR_MODE: Literal["mock", "oauth"] = "mock"

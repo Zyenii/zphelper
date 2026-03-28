@@ -8,6 +8,10 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("LOG_LEVEL", "INFO")
+os.environ.setdefault("OPENAI_API_KEY", "")
+os.environ.setdefault("LLM_ROUTER", "0")
+os.environ.setdefault("LLM_PLANNER", "0")
+os.environ.setdefault("UNKNOWN_LLM_REPLY", "0")
 
 from personal_ops_agent.main import app
 

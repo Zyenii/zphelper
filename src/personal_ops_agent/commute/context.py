@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from personal_ops_agent.commute.location_extractor import extract_locations_llm
+
 
 @dataclass(frozen=True)
 class TripContext:
@@ -49,12 +51,21 @@ def _next_event(calendar_state: dict, now_local: datetime) -> dict | None:
 
 def _extract_destination(message: str) -> str | None:
     lowered = message.lower()
-    patterns = [
-        r"(?:去|到)\s*([^\s，。,.!?？]{2,40}?)(?=(?:要多久|多久|多长时间|吗|呢|吧|[，。,.!?？]|$))",
-        r"(?:to)\s+([a-z0-9][a-z0-9\s,'-]{1,80}?)(?=\s+how\s+long\b|\s*\?|$)",
+    zh_patterns = [
+        r"(?:去|到)\s*([^，。!?？]{2,120}?)(?=(?:要多久|多久|多长时间|吗|呢|吧|[，。!?？]|$))",
     ]
-    for pattern in patterns:
-        match = re.search(pattern, message if "去" in pattern else lowered, re.IGNORECASE)
+    en_patterns = [
+        r"(?:to)\s+([a-z0-9][a-z0-9\s,'&-]{1,100}?)(?=\s+how\s+long\b|\s*\?|$)",
+        r"(?:get\s+to|go\s+to)\s+([a-z0-9][a-z0-9\s,'&-]{1,100}?)(?=\s+how\s+long\b|\s*\?|$)",
+    ]
+    for pattern in zh_patterns:
+        match = re.search(pattern, message, re.IGNORECASE)
+        if match:
+            value = match.group(1).strip(" ,，。.?？!")
+            if value:
+                return value
+    for pattern in en_patterns:
+        match = re.search(pattern, lowered, re.IGNORECASE)
         if match:
             value = match.group(1).strip(" ,，。.?？!")
             if value:
@@ -65,8 +76,8 @@ def _extract_destination(message: str) -> str | None:
 def _extract_origin(message: str) -> str | None:
     lowered = message.lower()
     patterns = [
-        r"从\s*([^\s，。,.!?？]{2,40})(?:出发|走|去|到)?",
-        r"from\s+([a-z0-9][a-z0-9\s,'-]{1,80}?)(?=\s+to\b|\s+for\b|$)",
+        r"从\s*([^，。!?？]{2,120}?)(?=(?:出发|走|去|到|[，。!?？]|$))",
+        r"from\s+([a-z0-9][a-z0-9\s,'&-]{1,100}?)(?=\s+to\b|\s+for\b|$)",
     ]
     for pattern in patterns:
         match = re.search(pattern, message if "从" in pattern else lowered, re.IGNORECASE)
@@ -112,6 +123,17 @@ def _extract_departure_time(message: str, now_local: datetime) -> datetime | Non
     return None
 
 
+def _resolve_place_alias(value: str | None, memory_state: dict | None) -> str | None:
+    if not value:
+        return value
+    aliases = (memory_state or {}).get("place_aliases", {})
+    if not isinstance(aliases, dict):
+        return value
+    normalized = value.strip()
+    alias = aliases.get(normalized) or aliases.get(normalized.lower())
+    return str(alias).strip() if isinstance(alias, str) and alias.strip() else value
+
+
 def resolve_trip_context(
     message: str,
     intent: str,
@@ -119,19 +141,26 @@ def resolve_trip_context(
     now_utc: datetime,
     timezone_name: str,
     default_origin: str,
+    memory_state: dict | None = None,
 ) -> TripContext:
     local_tz = _get_tz(timezone_name)
     now_local = now_utc.astimezone(local_tz)
     next_event = _next_event(calendar_state=calendar_state, now_local=now_local)
 
     explicit_destination = _extract_destination(message)
-    calendar_destination = (next_event or {}).get("location")
-    destination = explicit_destination or calendar_destination
+    explicit_origin = _extract_origin(message)
+    if not explicit_destination:
+        llm_locations = extract_locations_llm(message)
+        if llm_locations:
+            explicit_destination = llm_locations.destination or explicit_destination
+            explicit_origin = llm_locations.origin or explicit_origin
+    calendar_destination = _resolve_place_alias((next_event or {}).get("location"), memory_state)
+    destination = _resolve_place_alias(explicit_destination, memory_state) or calendar_destination
     used_calendar_destination = bool(destination and not explicit_destination and calendar_destination)
 
     if not destination:
         return TripContext(
-            origin_text=_extract_origin(message) or default_origin,
+            origin_text=_resolve_place_alias(explicit_origin or default_origin, memory_state) or default_origin,
             destination_text="",
             departure_time=now_local,
             event_start_time=None,
@@ -141,7 +170,9 @@ def resolve_trip_context(
             clarification_question="你要去哪里？请告诉我目的地。",
         )
 
-    origin = _extract_origin(message) or default_origin
+    profile = (memory_state or {}).get("user_profile", {})
+    memory_home = profile.get("home_location") if isinstance(profile, dict) else None
+    origin = _resolve_place_alias(explicit_origin or memory_home or default_origin, memory_state) or default_origin
     departure_time = _extract_departure_time(message, now_local) or now_local
 
     event_start_local = None

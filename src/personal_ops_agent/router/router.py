@@ -78,6 +78,21 @@ TODO_KEYWORDS = {
     "记得",
 }
 
+TODO_READ_KEYWORDS = {
+    "what are my todos",
+    "show my todos",
+    "list my todos",
+    "what tasks do i have",
+    "my tasks",
+    "我的todo",
+    "我的待办",
+    "有哪些todo",
+    "有哪些待办",
+    "看看我的待办",
+    "列出待办",
+    "今天的任务",
+}
+
 CHECKLIST_KEYWORDS = {
     "what should i bring",
     "leaving checklist",
@@ -110,6 +125,8 @@ def rule_route(message: str) -> RouteDecision:
     lowered = message.lower()
     if any(keyword in lowered or keyword in message for keyword in CALENDAR_CREATE_KEYWORDS):
         return RouteDecision(intent=Intent.CALENDAR_CREATE.value, confidence=1.0, reason="rule_match_calendar_create")
+    if any(keyword in lowered or keyword in message for keyword in TODO_READ_KEYWORDS):
+        return RouteDecision(intent=Intent.TODO_LIST.value, confidence=1.0, reason="rule_match_todo_list")
     if any(keyword in lowered or keyword in message for keyword in TODO_KEYWORDS):
         return RouteDecision(intent=Intent.TODO_CREATE.value, confidence=1.0, reason="rule_match_todo")
     if any(keyword in lowered or keyword in message for keyword in CHECKLIST_KEYWORDS):

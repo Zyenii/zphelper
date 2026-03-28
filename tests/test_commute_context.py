@@ -100,3 +100,35 @@ def test_destination_english_airport_works() -> None:
         default_origin="Home",
     )
     assert context.destination_text == "airport"
+
+
+def test_destination_with_spaces_in_mixed_language_works() -> None:
+    context = resolve_trip_context(
+        message="我现在去chengdu famous food要多久",
+        intent="eta_query",
+        calendar_state={"events": []},
+        now_utc=datetime(2026, 3, 1, 12, 0, tzinfo=timezone.utc),
+        timezone_name="UTC",
+        default_origin="Home",
+    )
+    assert context.destination_text == "chengdu famous food"
+
+
+def test_location_llm_fallback_used_only_when_rule_fails(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "personal_ops_agent.commute.context.extract_locations_llm",
+        lambda _message: type(
+            "FakeResult",
+            (),
+            {"origin": None, "destination": "chengdu famous food", "confidence": 0.91},
+        )(),
+    )
+    context = resolve_trip_context(
+        message="get me there",
+        intent="eta_query",
+        calendar_state={"events": []},
+        now_utc=datetime(2026, 3, 1, 12, 0, tzinfo=timezone.utc),
+        timezone_name="UTC",
+        default_origin="Home",
+    )
+    assert context.destination_text == "chengdu famous food"

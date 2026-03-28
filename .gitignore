@@ -208,3 +208,5 @@ __marimo__/
 
 # Secrets
 secret/
+artifacts/
+data/user_memory.json

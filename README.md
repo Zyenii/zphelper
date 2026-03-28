@@ -87,6 +87,57 @@ Live tests are skipped by default. To run:
 RUN_LLM_LIVE_TEST=1 pytest -q tests/test_timewindow_llm_live.py
 ```
 
+## Enable Planner Mode
+Planner mode adds a bounded LLM planner in front of the existing router. When enabled, the model outputs a structured action plan and the executor runs those actions in order. If planning fails or confidence is too low, the system falls back to the existing rule/intent workflow.
+
+Set `.env` values:
+```env
+LLM_PLANNER=1
+LLM_PLANNER_MODEL=gpt-5-mini
+LLM_PLANNER_THRESHOLD=0.75
+LLM_PLANNER_MAX_ACTIONS=4
+OPENAI_API_KEY=your_key
+```
+
+Planner output is returned in `/chat` response state:
+- `state.plan`
+- `state.plan_confidence`
+- `state.plan_reason`
+- `state.plan_used`
+- `state.memory`
+
+For harder mixed-language commute destinations, optional location extraction fallback can be enabled:
+```env
+LLM_LOCATION_EXTRACTOR=1
+LLM_LOCATION_EXTRACTOR_MODEL=gpt-5-mini
+LLM_LOCATION_EXTRACTOR_THRESHOLD=0.75
+```
+
+## Long-Term Memory
+The repo now includes a lightweight long-term memory store for stable user context.
+
+Configure:
+```env
+MEMORY_ENABLED=1
+MEMORY_STORE_PATH=data/user_memory.json
+```
+
+Seed file template:
+- `data/user_memory.example.json`
+
+Memory is currently used for:
+- planner context (user profile, place aliases, preferences)
+- commute resolution:
+  - `home_location`
+  - `place_aliases`
+  - `extra_buffer_minutes`
+- checklist personalization:
+  - rain / cold thresholds
+  - saved prep items for meetings / interviews / presentations
+
+The live memory file is auto-created when missing and is gitignored:
+- `data/user_memory.json`
+
 ## Tests
 ```bash
 pytest -q
@@ -189,6 +240,38 @@ Run one command:
 ```bash
 python scripts/run_regression.py
 ```
+
+## Agent Evaluation Framework
+The repo now includes a staged evaluation harness for the bounded planner-agent.
+
+What it checks per query:
+- intent routing correctness
+- planned tool-chain correctness
+- execution fidelity (`executed_actions` follows `planned_actions`)
+- final response consistency with structured state
+- required structured fields coverage
+- operational metrics:
+  - LLM calls
+  - total tokens
+  - request latency
+  - estimated cost
+
+Fixture:
+- `tests/fixtures/agent_eval_v1.json`
+
+Runner:
+```bash
+python scripts/run_agent_eval.py
+```
+
+Outputs:
+- `artifacts/agent_eval_workflow_baseline.json`
+- `artifacts/agent_eval_planner_variant.json` (only when `OPENAI_API_KEY` is available)
+
+Design notes:
+- Baseline variant disables planner and evaluates the deterministic workflow path.
+- Planner variant enables bounded planning and compares stage-level metrics and end-to-end success.
+- This supports A/B evaluation of cost-quality-latency tradeoffs instead of checking final text only.
 
 ## Enable Google Calendar OAuth Mode
 Install OAuth dependencies:

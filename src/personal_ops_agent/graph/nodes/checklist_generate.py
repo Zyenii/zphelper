@@ -11,6 +11,7 @@ def checklist_generate_node(state: AgentState) -> AgentState:
         calendar_state=state.get("calendar", {}),
         weather_state=state.get("weather", {}),
         commute_state=state.get("commute", {}),
+        memory_state=state.get("memory", {}),
     )
     return {
         "checklist": checklist.model_dump(),

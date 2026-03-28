@@ -1,0 +1,22 @@
+{
+  "user_profile": {
+    "default_timezone": "America/New_York",
+    "home_location": "",
+    "preferred_transport_mode": "",
+    "default_calendar_id": "primary"
+  },
+  "preferences": {
+    "rain_alert_threshold": 0.5,
+    "cold_alert_celsius": 3,
+    "extra_buffer_minutes": 0
+  },
+  "place_aliases": {
+    "home": "",
+    "airport": "Philadelphia International Airport"
+  },
+  "behavioral_notes": {
+    "meeting_prep": [],
+    "interview_prep": [],
+    "presentation_prep": []
+  }
+}

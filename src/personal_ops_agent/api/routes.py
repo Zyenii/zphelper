@@ -45,6 +45,16 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         state_snapshot["todo"] = result["todo"]
     if "checklist" in result:
         state_snapshot["checklist"] = result["checklist"]
+    if "memory" in result:
+        state_snapshot["memory"] = result["memory"]
+    if "plan" in result:
+        state_snapshot["plan"] = result["plan"]
+    if "plan_confidence" in result:
+        state_snapshot["plan_confidence"] = result["plan_confidence"]
+    if "plan_reason" in result:
+        state_snapshot["plan_reason"] = result["plan_reason"]
+    if "plan_used" in result:
+        state_snapshot["plan_used"] = result["plan_used"]
     if "eval" in result:
         state_snapshot["eval"] = result["eval"]
     state_snapshot["eval"] = {**state_snapshot.get("eval", {}), "runtime": get_runtime_stats()}
