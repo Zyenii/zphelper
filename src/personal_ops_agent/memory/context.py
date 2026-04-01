@@ -25,8 +25,14 @@ def build_planner_memory_context(memory: PersonalMemory) -> dict[str, object]:
     }
 
 
-def build_planner_context(*, user_message: str, memory: PersonalMemory, now_utc: datetime) -> dict[str, object]:
-    return {
+def build_planner_context(
+    *,
+    user_message: str,
+    memory: PersonalMemory,
+    now_utc: datetime,
+    continuation: dict[str, object] | None = None,
+) -> dict[str, object]:
+    context = {
         "user_message": user_message,
         "current_time_utc": now_utc.isoformat(),
         "available_tools": [
@@ -43,3 +49,6 @@ def build_planner_context(*, user_message: str, memory: PersonalMemory, now_utc:
         ],
         "memory": build_planner_memory_context(memory),
     }
+    if continuation:
+        context["continuation_context"] = continuation
+    return context

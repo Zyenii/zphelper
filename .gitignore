@@ -210,3 +210,4 @@ __marimo__/
 secret/
 artifacts/
 data/user_memory.json
+data/session_context.json

@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     DEFAULT_TIMEZONE: str = "America/New_York"
     MEMORY_ENABLED: bool = True
     MEMORY_STORE_PATH: str = "data/user_memory.json"
+    SESSION_CONTEXT_STORE_PATH: str = "data/session_context.json"
+    MAX_CLARIFICATION_TURNS: int = 3
     TIMEWINDOW_NOW_ISO: str | None = None
     MOCK_CALENDAR: bool = False
     GOOGLE_CALENDAR_MODE: Literal["mock", "oauth"] = "mock"

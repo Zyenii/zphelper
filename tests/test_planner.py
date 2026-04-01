@@ -62,11 +62,12 @@ def test_planner_unknown_allows_empty_actions(monkeypatch) -> None:
 
 
 def test_chat_uses_planner_path(monkeypatch) -> None:
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = "tests/fixtures/test_session_context.json"
     _reset_caches()
     client = TestClient(app)
     monkeypatch.setattr(
         "personal_ops_agent.graph.nodes.planner.make_plan",
-        lambda _message: ExecutionPlan(
+        lambda _message, **_kwargs: ExecutionPlan(
             goal="summarize schedule",
             intent="schedule_summary",
             actions=[
@@ -87,11 +88,12 @@ def test_chat_uses_planner_path(monkeypatch) -> None:
 
 
 def test_planner_commute_args_preserve_requested_transport_mode(monkeypatch) -> None:
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = "tests/fixtures/test_session_context.json"
     _reset_caches()
     client = TestClient(app)
     monkeypatch.setattr(
         "personal_ops_agent.graph.nodes.planner.make_plan",
-        lambda _message: ExecutionPlan(
+        lambda _message, **_kwargs: ExecutionPlan(
             goal="estimate driving eta to new york",
             intent="eta_query",
             actions=[
@@ -116,11 +118,12 @@ def test_planner_commute_args_preserve_requested_transport_mode(monkeypatch) -> 
 
 
 def test_eta_query_defaults_to_driving_even_without_planner_mode_arg(monkeypatch) -> None:
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = "tests/fixtures/test_session_context.json"
     _reset_caches()
     client = TestClient(app)
     monkeypatch.setattr(
         "personal_ops_agent.graph.nodes.planner.make_plan",
-        lambda _message: ExecutionPlan(
+        lambda _message, **_kwargs: ExecutionPlan(
             goal="estimate eta to new york",
             intent="eta_query",
             actions=[
@@ -182,11 +185,12 @@ def test_eta_query_keeps_transit_when_message_explicitly_requests_transit(monkey
 
 
 def test_eta_query_requested_walking_degrades_output_to_driving_eta(monkeypatch) -> None:
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = "tests/fixtures/test_session_context.json"
     _reset_caches()
     client = TestClient(app)
     monkeypatch.setattr(
         "personal_ops_agent.graph.nodes.planner.make_plan",
-        lambda _message: ExecutionPlan(
+        lambda _message, **_kwargs: ExecutionPlan(
             goal="estimate walking time to new york",
             intent="eta_query",
             actions=[
@@ -213,11 +217,12 @@ def test_eta_query_requested_walking_degrades_output_to_driving_eta(monkeypatch)
 
 
 def test_chat_uses_todo_read_path(monkeypatch) -> None:
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = "tests/fixtures/test_session_context.json"
     _reset_caches()
     client = TestClient(app)
     monkeypatch.setattr(
         "personal_ops_agent.graph.nodes.planner.make_plan",
-        lambda _message: ExecutionPlan(
+        lambda _message, **_kwargs: ExecutionPlan(
             goal="list current todos",
             intent="todo_list",
             actions=[{"tool": "todo_read", "args": {}}],
@@ -236,3 +241,91 @@ def test_chat_uses_todo_read_path(monkeypatch) -> None:
     assert payload["state"]["plan_used"] is True
     assert payload["state"]["eval"]["planner"]["executed_actions"] == ["todo_read"]
     assert "todo" in payload["state"]
+
+
+def test_clarification_flow_persists_continuation_until_answer_is_complete(monkeypatch, tmp_path) -> None:
+    session_store = tmp_path / "session_context.json"
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = str(session_store)
+    os.environ["MAX_CLARIFICATION_TURNS"] = "3"
+    _reset_caches()
+    client = TestClient(app)
+
+    def fake_make_plan(message: str, **_kwargs) -> ExecutionPlan:
+        if message == "我现在过去要多久":
+            return ExecutionPlan(
+                status="needs_clarification",
+                goal="estimate eta",
+                intent="eta_query",
+                actions=[],
+                reason="destination missing",
+                confidence=0.95,
+                missing_slots=["destination"],
+                clarification_question="你想去哪里？",
+            )
+        return ExecutionPlan(
+            status="ready",
+            goal="estimate eta",
+            intent="eta_query",
+            actions=[
+                {
+                    "tool": "commute_plan",
+                    "args": {
+                        "destination": "New York",
+                        "departure_time": "now",
+                        "transport_mode": "driving",
+                    },
+                }
+            ],
+            reason="destination resolved",
+            confidence=0.95,
+            known_slots={"destination": "New York"},
+        )
+
+    monkeypatch.setattr("personal_ops_agent.graph.nodes.planner.make_plan", fake_make_plan)
+
+    first = client.post("/chat", json={"message": "我现在过去要多久", "session_id": "s1"})
+    assert first.status_code == 200
+    first_body = first.json()
+    assert first_body["output"] == "你想去哪里？"
+    assert session_store.exists()
+    assert "你想去哪里？" in session_store.read_text(encoding="utf-8")
+
+    second = client.post("/chat", json={"message": "纽约", "session_id": "s1"})
+    assert second.status_code == 200
+    second_body = second.json()
+    assert second_body["state"]["plan_used"] is True
+    assert second_body["state"]["commute"]["recommendation"]["destination"] == "New York"
+    if session_store.exists():
+        assert "s1" not in session_store.read_text(encoding="utf-8")
+
+
+def test_clarification_stops_after_max_turns(monkeypatch, tmp_path) -> None:
+    session_store = tmp_path / "session_context.json"
+    os.environ["SESSION_CONTEXT_STORE_PATH"] = str(session_store)
+    os.environ["MAX_CLARIFICATION_TURNS"] = "3"
+    _reset_caches()
+    client = TestClient(app)
+
+    monkeypatch.setattr(
+        "personal_ops_agent.graph.nodes.planner.make_plan",
+        lambda _message, **_kwargs: ExecutionPlan(
+            status="needs_clarification",
+            goal="estimate eta",
+            intent="eta_query",
+            actions=[],
+            reason="destination missing",
+            confidence=0.95,
+            missing_slots=["destination"],
+            clarification_question="你想去哪里？",
+        ),
+    )
+
+    first = client.post("/chat", json={"message": "我现在过去要多久", "session_id": "s2"})
+    second = client.post("/chat", json={"message": "嗯", "session_id": "s2"})
+    third = client.post("/chat", json={"message": "不知道", "session_id": "s2"})
+
+    assert first.json()["output"] == "你想去哪里？"
+    assert second.json()["output"] == "你想去哪里？"
+    assert third.json()["output"] == "当前信息仍不足以完成这个任务，请重新完整描述你的需求。"
+    if session_store.exists():
+        assert "s2" not in session_store.read_text(encoding="utf-8")

@@ -3,6 +3,7 @@ from typing import Any, TypedDict
 
 class AgentState(TypedDict, total=False):
     trace_id: str
+    session_id: str
     user_message: str
     intent: str
     output: str

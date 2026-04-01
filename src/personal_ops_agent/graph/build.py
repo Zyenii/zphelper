@@ -43,6 +43,9 @@ def _route_from_intent(state: AgentState) -> str:
 
 def _route_from_planner(state: AgentState) -> str:
     if state.get("plan_used") and state.get("plan"):
+        plan = state.get("plan", {})
+        if isinstance(plan, dict) and plan.get("status") in {"needs_clarification", "cannot_complete"}:
+            return "final_path"
         return "planner_path"
     return "router_path"
 
@@ -71,6 +74,7 @@ def build_graph():
         _route_from_planner,
         {
             "planner_path": "plan_executor",
+            "final_path": "final",
             "router_path": "router",
         },
     )

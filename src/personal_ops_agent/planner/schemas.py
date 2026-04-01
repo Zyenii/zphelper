@@ -20,6 +20,9 @@ AllowedTool = Literal[
 ]
 
 
+PlanStatus = Literal["ready", "needs_clarification", "cannot_complete"]
+
+
 class PlanAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -30,11 +33,15 @@ class PlanAction(BaseModel):
 class ExecutionPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    status: PlanStatus = "ready"
     goal: str
     intent: str
     actions: list[PlanAction]
     reason: str
     confidence: float
+    missing_slots: list[str] = Field(default_factory=list)
+    clarification_question: str | None = None
+    known_slots: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("intent")
     @classmethod
@@ -46,6 +53,11 @@ class ExecutionPlan(BaseModel):
     @field_validator("actions")
     @classmethod
     def validate_actions(cls, value: list[PlanAction]) -> list[PlanAction]:
+        return value
+
+    @field_validator("missing_slots")
+    @classmethod
+    def validate_missing_slots(cls, value: list[str]) -> list[str]:
         return value
 
     @field_validator("confidence")

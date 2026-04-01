@@ -690,10 +690,10 @@
         <div class="slide-inner">
           <div class="slide-content">
             <div class="slide-number">第 5 页 · 亮点二：上下文设计</div>
-            <h2>从 planning 到 execution 的上下文设计</h2>
+            <h2>上下文设计</h2>
             <p class="lede">
-              这个系统不是简单地把原始文本传来传去，而是给不同阶段设计了不同的 context：
-              planner context、execution context，以及 final response 对应的 structured state。
+              这个系统不是简单地把原始文本和 memory 全量塞给模型，而是按阶段拆成不同层次的 context。
+              planner、execution、response 各自读取不同信息；同时 memory 也被分成图内状态、长期记忆和外部事实来源。
             </p>
             <div class="grid-3">
               <div class="panel">
@@ -714,22 +714,45 @@
                 </ul>
               </div>
               <div class="panel">
-                <h3>当前局限</h3>
+                <h3>Response Context</h3>
                 <ul class="list">
-                  <li>context filtering 还不够细</li>
-                  <li>planner 目前拿到的 memory 仍然偏宽</li>
-                  <li>下一步是 intent-aware context minimization</li>
+                  <li>final output 从 structured state 渲染</li>
+                  <li>planner reason 和 runtime stats 可回溯</li>
+                  <li>输出层不再独立“发明”语义</li>
                 </ul>
               </div>
             </div>
-            <div class="quote">
-              <p>
-                当前设计上的关键认识是：我已经有了 context engineering 的基础层，但下一步真正重要的
-                不是继续加 context，而是做 <strong>relevance control</strong>。
-              </p>
+            <div class="memory-band">
+              <div class="memory-card">
+                <small>图内工作记忆</small>
+                <h3>Short-Term Memory</h3>
+                <ul class="list">
+                  <li>intent、plan、tool outputs、runtime telemetry</li>
+                  <li>只服务当前请求</li>
+                  <li>支撑 execution 和 final synthesis</li>
+                </ul>
+              </div>
+              <div class="memory-card">
+                <small>持久化用户记忆</small>
+                <h3>Long-Term Memory</h3>
+                <ul class="list">
+                  <li>user profile 和 preferences</li>
+                  <li>place aliases</li>
+                  <li>behavioral notes，比如开会准备习惯</li>
+                </ul>
+              </div>
+              <div class="memory-card">
+                <small>外部世界</small>
+                <h3>External Memory</h3>
+                <ul class="list">
+                  <li>Google Calendar</li>
+                  <li>Todoist</li>
+                  <li>weather 和 ETA connectors</li>
+                </ul>
+              </div>
             </div>
             <div class="slide-footer">
-              <span>上下文不是越多越好，关键在于是否相关。</span>
+              <span>上下文和 memory 是分层设计的：不同阶段读取不同信息。</span>
               <a href="#slide-6">下一页 →</a>
             </div>
           </div>
@@ -739,52 +762,7 @@
       <section id="slide-6" class="slide">
         <div class="slide-inner">
           <div class="slide-content">
-            <div class="slide-number">第 6 页 · Memory 设计</div>
-            <h2>Short-term、Long-term 和 External Memory</h2>
-            <p class="lede">
-              在这个项目里，memory 不是单一概念，而是分层设计的。不同 memory 层解决的问题不同。
-            </p>
-            <div class="memory-band">
-              <div class="memory-card">
-                <small>Short-Term Memory</small>
-                <h3>图内工作记忆</h3>
-                <ul class="list">
-                  <li>intent、plan、tool outputs、runtime telemetry</li>
-                  <li>只服务当前请求</li>
-                  <li>支撑 execution 和 final synthesis</li>
-                </ul>
-              </div>
-              <div class="memory-card">
-                <small>Long-Term Memory</small>
-                <h3>持久化用户记忆</h3>
-                <ul class="list">
-                  <li>user profile 和 preferences</li>
-                  <li>place aliases</li>
-                  <li>behavioral notes，比如开会准备习惯</li>
-                </ul>
-              </div>
-              <div class="memory-card">
-                <small>External Memory</small>
-                <h3>工具系统中的事实来源</h3>
-                <ul class="list">
-                  <li>Google Calendar</li>
-                  <li>Todoist</li>
-                  <li>weather 和 ETA connectors</li>
-                </ul>
-              </div>
-            </div>
-            <div class="slide-footer">
-              <span>memory 是分层的：图内状态、用户记忆、外部系统事实来源。</span>
-              <a href="#slide-7">下一页 →</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="slide-7" class="slide">
-        <div class="slide-inner">
-          <div class="slide-content">
-            <div class="slide-number">第 7 页 · 亮点三：Evaluation</div>
+            <div class="slide-number">第 6 页 · 亮点三：Evaluation</div>
             <h2>分层评估 agent pipeline</h2>
             <p class="lede">
               我专门做了一套 agent system 的 evaluation framework。它不是只看 final answer 对不对，
@@ -814,16 +792,16 @@
             </div>
             <div class="slide-footer">
               <span>evaluation 的价值在于：不仅知道错了，还知道错在哪一层。</span>
-              <a href="#slide-8">下一页 →</a>
+              <a href="#slide-7">下一页 →</a>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="slide-8" class="slide">
+      <section id="slide-7" class="slide">
         <div class="slide-inner">
           <div class="slide-content">
-            <div class="slide-number">第 8 页 · A/B 结果</div>
+            <div class="slide-number">第 7 页 · A/B 结果</div>
             <h2>planner vs baseline</h2>
             <p class="lede">
               评测结果很清楚地显示了 quality-cost tradeoff：deterministic workflow 更便宜，
@@ -868,6 +846,57 @@
             </div>
             <div class="slide-footer">
               <span>这一页是整个项目最核心的证据：planner 不是噱头，而是有量化收益。</span>
+              <a href="#slide-8">下一页 →</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="slide-8" class="slide">
+        <div class="slide-inner">
+          <div class="slide-content">
+            <div class="slide-number">第 8 页 · Harness Engineering</div>
+            <h2>Harness Engineering</h2>
+            <p class="lede">
+              如果按 agent harness 的核心准则来看，我这个项目已经覆盖了其中大部分，但完成度不完全一样。
+              这里我更关心的不是“功能做了多少”，而是系统是否具备受约束执行、恢复和观测能力。
+            </p>
+            <div class="grid-2">
+              <div class="panel">
+                <h3>Tool</h3>
+                <ul class="list">
+                  <li>planner 只能从固定白名单工具中选 action</li>
+                  <li>executor 通过本地 registry 把 tool name 映射到 node</li>
+                  <li>工具调用不是 LLM 直接执行，而是程序按 plan 顺序执行</li>
+                </ul>
+              </div>
+              <div class="panel">
+                <h3>State Management &amp; Memory</h3>
+                <ul class="list">
+                  <li>LangGraph state 作为 request-scoped working memory，承载 intent、plan 和 tool outputs</li>
+                  <li>short-term state、long-term memory 和 external memory 是分层设计的</li>
+                  <li>planner、execution、response 读取不同层次的 context</li>
+                </ul>
+              </div>
+              <div class="panel">
+                <h3>Guardrails &amp; Safety</h3>
+                <ul class="list">
+                  <li>ExecutionPlan、action args 和 memory 都有 schema 约束</li>
+                  <li>bounded action space 限制了 agent 的执行范围，不是 fully open agent</li>
+                  <li>当前没有 OS/process-level sandbox，主要依赖 schema、fallback 和 action boundary</li>
+                </ul>
+              </div>
+              <div class="panel">
+                <h3>Observability &amp; Logging</h3>
+                <ul class="list">
+                  <li>telemetry 记录 token、latency、retry、LLM error 和 trace_id</li>
+                  <li>evaluation 可以直接比较 planned actions 和 executed actions，定位 planning / execution 脱节</li>
+                  <li>请求级日志覆盖 router、planner 和 tool execution</li>
+                </ul>
+              </div>
+            </div>
+            <div class="slide-footer">
+              <span>这部分更接近 agent harness，而不只是“把功能拼起来”。</span>
               <a href="#slide-9">下一页 →</a>
             </div>
           </div>
@@ -877,39 +906,27 @@
       <section id="slide-9" class="slide">
         <div class="slide-inner">
           <div class="slide-content">
-            <div class="slide-number">第 9 页</div>
-            <h2>工程迭代与未来方向</h2>
+            <div class="slide-number">第 9 页 · 未来方向</div>
+            <h2>未来方向</h2>
             <p class="lede">
-              这个项目后期很大一部分工作其实不是新增功能，而是把系统打磨到“可展示、可解释、可评估”：
-              包括 plan 执行一致性、fallback、超时处理、observability，以及环境问题下的可靠性收敛。
+              下一步我更想做的，不是继续机械地加功能，而是把这个系统从“受约束的单次执行”
+              推进到“更完整的 agent runtime”。
             </p>
             <div class="grid-2">
               <div class="panel">
-                <h3>已经完成的工程工作</h3>
+                <h3>Runtime 演进</h3>
                 <ul class="list">
-                  <li>planner args 真实进入 execution，修复了 plan-execution mismatch</li>
-                  <li>ETA mode、state、output 做了统一，避免前后矛盾</li>
-                  <li>补上 todo read path，避免 unsupported-intent fallthrough</li>
-                  <li>planner timeout 现在会 retry/fallback，不再直接把 eval 跑崩</li>
-                  <li>telemetry 记录 token、retry、latency 和 LLM error</li>
+                  <li>引入更完整的 agent loop，让失败步骤支持 re-plan，而不是只做 fallback</li>
+                  <li>把会话历史加入 context assembly，作为 planner 和 response 的上下文来源之一</li>
                 </ul>
               </div>
               <div class="panel">
-                <h3>下一步方向</h3>
+                <h3>Memory 与 Reflection</h3>
                 <ul class="list">
-                  <li>intent-aware context filtering / pruning</li>
-                  <li>explicit、user-confirmed 的 long-term memory write</li>
-                  <li>planner timeout tuning 和 prompt-size reduction</li>
-                  <li>更个性化、但噪音更低的 memory-aware behavior</li>
+                  <li>继续完善 long-term memory，包括更稳的写入策略和更高效的读取方式</li>
+                  <li>引入 reflection：对失败 case 做 self-critique，再把经验沉淀成后续策略</li>
                 </ul>
               </div>
-            </div>
-            <div class="quote">
-              <p>
-                这个项目最想体现的一点是：它不是“套个 LLM 接几个工具”，而是把 assistant 当成一个
-                被工程化设计的 agent system 来做，有 bounded planning、memory layering、
-                measurable tradeoff，以及 observable failure modes。
-              </p>
             </div>
             <div class="slide-footer">
               <span>展示结束。</span>

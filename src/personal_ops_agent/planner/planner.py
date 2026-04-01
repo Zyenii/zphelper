@@ -76,6 +76,11 @@ def build_planner_prompt(max_actions: int, context: dict[str, Any] | None = None
         f"Use at most {max_actions} actions.\n"
         "Never invent tools outside the allowed list.\n"
         "If no supported workflow fits, choose intent unknown and set actions to an empty list.\n"
+        "If the current request lacks required information, do not guess.\n"
+        "Instead return status needs_clarification, list missing_slots, and provide one concise clarification_question.\n"
+        "If continuation_context is present, treat the current user message as a possible answer to the unresolved task.\n"
+        "If the information is now sufficient, return status ready.\n"
+        "If the task still cannot be completed after repeated clarification, return status cannot_complete with no actions.\n"
         "Allowed intents:\n"
         f"{intent_docs}\n\n"
         "Allowed tools:\n"
@@ -92,9 +97,10 @@ def build_planner_prompt(max_actions: int, context: dict[str, Any] | None = None
         "- calendar_create usually uses [calendar_create]\n"
         "- unknown should use no tool actions; use empty actions only for unknown\n"
         "Output schema:\n"
-        '{"goal":"short goal","intent":"<intent>","actions":[{"tool":"schedule_read","args":{}}],"reason":"short reason","confidence":0.0}\n'
-        'Example eta_query: {"goal":"estimate driving eta","intent":"eta_query","actions":[{"tool":"commute_plan","args":{"destination":"New York","departure_time":"now","transport_mode":"driving"}}],"reason":"need real-time driving ETA","confidence":0.9}\n'
-        'Example unknown: {"goal":"answer unsupported request","intent":"unknown","actions":[],"reason":"request is outside supported workflows","confidence":0.9}\n'
+        '{"status":"ready","goal":"short goal","intent":"<intent>","actions":[{"tool":"schedule_read","args":{}}],"reason":"short reason","confidence":0.0,"missing_slots":[],"clarification_question":null,"known_slots":{}}\n'
+        'Example eta_query: {"status":"ready","goal":"estimate driving eta","intent":"eta_query","actions":[{"tool":"commute_plan","args":{"destination":"New York","departure_time":"now","transport_mode":"driving"}}],"reason":"need real-time driving ETA","confidence":0.9,"missing_slots":[],"clarification_question":null,"known_slots":{"destination":"New York"}}\n'
+        'Example clarification: {"status":"needs_clarification","goal":"estimate travel time","intent":"eta_query","actions":[],"reason":"destination missing","confidence":0.9,"missing_slots":["destination"],"clarification_question":"你想去哪里？","known_slots":{}}\n'
+        'Example unknown: {"status":"cannot_complete","goal":"answer unsupported request","intent":"unknown","actions":[],"reason":"request is outside supported workflows","confidence":0.9,"missing_slots":[],"clarification_question":null,"known_slots":{}}\n'
         f"Context JSON:\n{json.dumps(context or {}, ensure_ascii=False)}\n"
     )
 
@@ -139,11 +145,15 @@ def should_use_planner() -> bool:
 def _normalize_unknown_plan(raw: ExecutionPlan) -> ExecutionPlan:
     if raw.intent == Intent.UNKNOWN.value:
         return ExecutionPlan(
+            status="cannot_complete",
             goal=raw.goal or "handle unknown request",
             intent=Intent.UNKNOWN.value,
             actions=[],
             reason=raw.reason,
             confidence=raw.confidence,
+            missing_slots=[],
+            clarification_question=None,
+            known_slots=raw.known_slots,
         )
     return raw
 
